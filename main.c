@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv)
 {
-	int ligne = 10, colonne = ligne;
+	int ligne = 100, colonne = ligne;
 	double *matrice = malloc(ligne * colonne * sizeof(double));
 
 	double m_a = 1.0, m_b = 2.0;
@@ -19,13 +19,16 @@ int main(int argc, char **argv)
 		}
 	}
 
-	fprintf(stdout, "Matrice de base\n");
 /*	matrice_test(ligne, colonne, matrice);*/
-/*	affichage(ligne, colonne, matrice);*/
+/*	comparaison(ligne);*/
+
+#ifdef DEBUG
+	fprintf(stdout, "Matrice de base\n");
+	affichage(ligne, colonne, matrice);
+#endif
 
 	simultaneous_iteration(ligne, colonne, matrice);
 
-/*	comparaison(ligne);*/
 	free(matrice);
 
 	return 0;

@@ -104,6 +104,15 @@ void matMat(int ligne, int colonne, double *A, double *B, double *Z)
 	}
 }
 
+void matVec(int ligne, int colonne, int k, double *A, double *B, double *Z)
+{
+	for(int i = 0; i < ligne; i++)
+	{
+		for(int j = 0; j < colonne; j++)
+			Z[i * colonne + j] = A[i * colonne + j] * B[j * ligne + k];
+	}
+}
+
 void simultaneous_iteration(int ligne, int colonne, double *A)
 {
 	double *W = calloc(ligne * colonne, sizeof(double));
@@ -119,20 +128,22 @@ void simultaneous_iteration(int ligne, int colonne, double *A)
 	// DORGQR generates an M-by-N real matrix Q with orthonormal columns
 	LAPACKE_dorgqr(LAPACK_ROW_MAJOR, ligne, colonne, 1, Q, ligne, tau);
 
-	int k = 1;
-	while(k < ligne)
-/*	while(norme(ligne, colonne, k-1, Q) > 0.001 && k < ligne)*/
+	int k = 0;
+	while(norme(ligne, colonne, k, Q) > 0.001 || k < ligne)
 	{
 		// W = A * Q^k-1
-		matMat(ligne, colonne, A, Q, W); 
+		matVec(ligne, colonne, k, A, Q, W);
+
 		// W = Q * R
 		LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, ligne, colonne, W, ligne, tau); 
 
-		if(k == ligne)
+#ifdef DEBUG
+		if(k == ligne - 1)
 		{
 			fprintf(stdout, "\nMatrice R\n");
 			affichage(ligne, colonne, W);
 		}
+#endif
 
 		// W = Q
 		LAPACKE_dorgqr(LAPACK_ROW_MAJOR, ligne, colonne, k, W, ligne, tau);
@@ -143,10 +154,12 @@ void simultaneous_iteration(int ligne, int colonne, double *A)
 		k++;
 	}
 
-	
+	fprintf(stdout, "Iterations %d - Norme = %lf \n", k - 1, norme(ligne, colonne, k - 1, Q));
 
+#ifdef DEBUG
 	fprintf(stdout, "\nMatrice Q\n");
 	affichage(ligne, colonne, Q);
+#endif
 
 	free(W);
 	free(Q);

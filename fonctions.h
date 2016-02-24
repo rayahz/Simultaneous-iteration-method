@@ -1,7 +1,6 @@
 #ifndef FONCTIONS_H
 #define FONCTIONS_H
 
-
 //#include <mpi.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -31,6 +30,7 @@ void print_time(struct info_t *, double);
 void affichage(int, int, double*);
 double norme(int, int, int, double*);
 void matMat(int, int, double*, double*, double*);
+void matVec(int, int, int, double*, double*, double*);
 void simultaneous_iteration(int, int, double*);
 void matrice_test(int, int, double*);
 void comparaison(int);
