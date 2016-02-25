@@ -76,20 +76,13 @@ double norme(int ligne, int colonne, int k, double *X)
 	return sqrt(resultat);
 }
 
-double norme2(int ligne, int colonne, int k, double *Q1, double *Q2)
+double norme2(int ligne, int colonne, double *A)
 {
 	double resultat = 0.0;
-	double *test = calloc(ligne * colonne, sizeof(double));
 
-	for(int i = 0; i < ligne; i++)
-		test[i * colonne + i] = 1.;
+	for(int i = 0; i < ligne * colonne; i++)
+		resultat += A[i] * A[i];
 
-	for(int i = 0; i < ligne; i++)
-	{
-			resultat += Q1[i * colonne + k-1] * Q2[i * colonne + k];
-	}
-
-	free(test);
 	return sqrt(resultat);
 }
 
@@ -98,9 +91,11 @@ void matMat(int ligne, int colonne, double *A, double *B, double *Z)
 	// Z = A * B
 	for(int i = 0; i < ligne; i++)
 	{
-		Z[i] = 0.;
 		for(int j = 0; j < colonne; j++)
-			Z[i] += A[i * colonne + j] * B[i * colonne + j];
+		{
+			for(int k = 0; k < colonne; k++)
+				Z[i * colonne + j] += A[i * colonne + k] * B[k * ligne + j];
+		}
 	}
 }
 
@@ -129,10 +124,10 @@ void simultaneous_iteration(int ligne, int colonne, double *A)
 	LAPACKE_dorgqr(LAPACK_ROW_MAJOR, ligne, colonne, 1, Q, ligne, tau);
 
 	int k = 0;
-	while(norme(ligne, colonne, k, Q) > 0.001 || k < ligne)
+	while(norme2(ligne, colonne, Q) > 0.001 && k < ligne)
 	{
 		// W = A * Q^k-1
-		matVec(ligne, colonne, k, A, Q, W);
+		matMat(ligne, colonne, A, Q, W);
 
 		// W = Q * R
 		LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, ligne, colonne, W, ligne, tau); 
@@ -154,7 +149,7 @@ void simultaneous_iteration(int ligne, int colonne, double *A)
 		k++;
 	}
 
-	fprintf(stdout, "Iterations %d - Norme = %lf \n", k - 1, norme(ligne, colonne, k - 1, Q));
+	fprintf(stdout, "Iterations %d - Norme = %lf \n", k - 1, norme2(ligne, colonne, Q));
 
 #ifdef DEBUG
 	fprintf(stdout, "\nMatrice Q\n");
