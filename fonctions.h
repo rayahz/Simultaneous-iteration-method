@@ -8,8 +8,12 @@
 #include <lapacke.h>
 #include <math.h>
 #include <string.h>
+#include <stdint.h>
 
 #define M_PI 3.14159265358979323846
+#define DBL_EPSILON 0.00001
+
+
 
 struct info_t 
 {
@@ -28,11 +32,13 @@ void MPI_initialize(int, char **, struct info_t *);
 void print_time(struct info_t *, double);
 
 void affichage(int, int, double*);
-double norme(int, int, int, double*);
-void matMat(int, int, double*, double*, double*);
-void matVec(int, int, int, double*, double*, double*);
-void simultaneous_iteration(int, int, double*);
+void matMat(int, int, int, double*, double*, double*);
+void simultaneous_iteration(int, int, int, double*);
 void matrice_test(int, int, double*);
-void comparaison(int);
+void comparaison(int, int, double*);
+void mat_AMn(int, int, double*);
+void copy(int, int, double *, double *);
+double norme_Frobeinius(int, int, double *, double *);
+double mediane(int, double *);
 
 #endif

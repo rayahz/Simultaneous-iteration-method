@@ -1,61 +1,5 @@
 #include "fonctions.h"
 
-/*
-  PROCEDURE : MPI_initialize
-  DESCRIPTION : permet d'initialiser l'environnement MPI
-  IN : nombre d'arguments, vecteur d'arguments et structure info_t
-  OUT : /
-*/
-/*void MPI_initialize(int argc, char **argv, struct info_t *info)*/
-/*{*/
-/*	int Q, R;*/
-
-/*	MPI_Init(&argc, &argv);*/
-/*	MPI_Comm_rank(MPI_COMM_WORLD, &(info->rang));*/
-/*	MPI_Comm_size(MPI_COMM_WORLD, &(info->nproc));*/
-
-/*	info->temps = 0.0;*/
-/*	Q = n / info->nproc;*/
-/*	R = n % info->nproc;*/
-
-/*	if(info->rang < R)*/
-/*	{*/
-/*		info->nloc = Q + 1;*/
-/*		info->ideb = info->rang * (Q + 1);*/
-/*		info->ifin = info->ideb + info->nloc;*/
-/*	}else{*/
-/*		info->nloc = Q;*/
-/*		info->ideb = R * (Q+1) + (info->rang - R) * Q;*/
-/*		info->ifin = info->ideb + info->nloc;*/
-/*	}*/
-/*}*/
-
-
-/*  PROCEDURE : print_time
-  DESCRIPTION : permet d'afficher le temps d'execution de chaque processus
-  IN : structure info_t et temps d'execution
-  OUT : /
-*/
-/*void print_time(struct info_t *info, double runtime)*/
-/*{*/
-/*	int i;*/
-/*	double runtime_in_seconds = runtime / 1000000;*/
-/*	double runtime_t[info->nproc];*/
-
-/*	MPI_Gather(&runtime_in_seconds, 1, MPI_DOUBLE, &runtime_t, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);*/
-
-/*	if(info->rang == 0)*/
-/*	{*/
-/*		for(i = 0; i < info->nproc; i++)*/
-/*		{*/
-/*			if(info->temps < runtime_t[i])*/
-/*				info->temps = runtime_t[i];*/
-/*				*/
-/*			fprintf(stdout, "[%d] Temps de l'execution : %e s\n", i, runtime_t[i]);*/
-/*		}*/
-/*	}*/
-/*}*/
-
 void affichage(int M, int N, double *A)
 {
 	for(int i = 0; i < M; i++)
@@ -66,122 +10,160 @@ void affichage(int M, int N, double *A)
 	}
 }
 
-double norme(int ligne, int colonne, int k, double *X)
+void copy(int ligne, int colonne, double *dest, double *src)
 {
-	double resultat = 0.0;
-
-	for(int i = 0; i < ligne; i++)
-		resultat += X[i * colonne + k] * X[i * colonne + k];
-
-	return sqrt(resultat);
+	memcpy(dest, src, ligne * colonne * sizeof(double));
 }
 
-double norme2(int ligne, int colonne, double *A)
+double norme_Frobeinius(int ligne, int colonne, double *Q_old, double *Q)
 {
 	double resultat = 0.0;
 
 	for(int i = 0; i < ligne * colonne; i++)
-		resultat += A[i] * A[i];
+		resultat += (Q[i] - Q_old[i]) * (Q[i] - Q_old[i]);
 
 	return sqrt(resultat);
 }
 
-void matMat(int ligne, int colonne, double *A, double *B, double *Z)
+void matMat(int m, int n, int k, double *A, double *B, double *C)
 {
-	// Z = A * B
-	for(int i = 0; i < ligne; i++)
+	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, 1.0, A, k, B, n, 0.0, C, n);
+}
+
+double mediane(int n, double *T)
+{
+	int j;
+	double x;
+
+	for(int i = 0; i < n - 1; i++)
 	{
-		for(int j = 0; j < colonne; j++)
+		x = T[i];
+		j = i;
+		while(j > 0 && T[j - 1] > x)
 		{
-			for(int k = 0; k < colonne; k++)
-				Z[i * colonne + j] += A[i * colonne + k] * B[k * ligne + j];
+			T[j] = T[j - 1];
+			j--;
 		}
+		T[j] = x;
 	}
+
+	return T[n / 2];
 }
 
-void matVec(int ligne, int colonne, int k, double *A, double *B, double *Z)
-{
-	for(int i = 0; i < ligne; i++)
-	{
-		for(int j = 0; j < colonne; j++)
-			Z[i * colonne + j] = A[i * colonne + j] * B[j * ligne + k];
-	}
-}
-
-void simultaneous_iteration(int ligne, int colonne, double *A)
+void simultaneous_iteration(int ligne, int colonne, int nb_eigen, double *A)
 {
 	double *W = calloc(ligne * colonne, sizeof(double));
 	double *Q = calloc(ligne * colonne, sizeof(double));
+	double *Q_old = calloc(ligne * colonne, sizeof(double));
+	double *lambda = calloc(nb_eigen, sizeof(double));
+	double *med = calloc(ligne, sizeof(double));
+	double *err = calloc(nb_eigen, sizeof(double));
 	double tau[ligne];
 
-	for(int i = 0; i < ligne; i++)
-		Q[i * colonne] = 1;
+	for(int i = 0; i < nb_eigen; i++)
+		Q[i * nb_eigen + colonne] = 1.;
 
 	// DGEQRF computes a QR factorization of a real M-by-N matrix A = Q * R
-	LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, ligne, colonne, Q, ligne, tau);
+	LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, ligne, nb_eigen, Q, nb_eigen, tau);
 
 	// DORGQR generates an M-by-N real matrix Q with orthonormal columns
-	LAPACKE_dorgqr(LAPACK_ROW_MAJOR, ligne, colonne, 1, Q, ligne, tau);
+	LAPACKE_dorgqr(LAPACK_ROW_MAJOR, ligne, nb_eigen, nb_eigen, Q, nb_eigen, tau);
 
 	int k = 0;
-	while(norme2(ligne, colonne, Q) > 0.001 && k < ligne)
+	do
 	{
+		memcpy(Q_old, Q, ligne * nb_eigen * sizeof(double));
+
 		// W = A * Q^k-1
-		matMat(ligne, colonne, A, Q, W);
+		cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, ligne, nb_eigen, colonne, 1.0, A, colonne, Q, nb_eigen, 0.0, W, nb_eigen);
 
-		// W = Q * R
-		LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, ligne, colonne, W, ligne, tau); 
-
-#ifdef DEBUG
-		if(k == ligne - 1)
-		{
-			fprintf(stdout, "\nMatrice R\n");
-			affichage(ligne, colonne, W);
-		}
-#endif
+		// Q * R = W
+		LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, ligne, nb_eigen, W, nb_eigen, tau);
 
 		// W = Q
-		LAPACKE_dorgqr(LAPACK_ROW_MAJOR, ligne, colonne, k, W, ligne, tau);
+		LAPACKE_dorgqr(LAPACK_ROW_MAJOR, ligne, nb_eigen, nb_eigen, W, nb_eigen, tau);;
 
-		for(int i = 0; i < ligne * colonne; i++)
-			Q[i] = W[i];
+#ifdef DEBUG
+		fprintf(stdout, "\nMatrice Q\n");
+		affichage(ligne, nb_eigen, W);
+#endif
 
+		copy(ligne, nb_eigen, Q, W);
 		k++;
+	} while(norme_Frobeinius(ligne, nb_eigen, Q_old, Q) > 1E-6);
+
+	fprintf(stdout, "Iterations %d - Norme = %lf \n", k - 1, norme_Frobeinius(ligne, nb_eigen, Q_old, Q));
+
+	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, ligne, nb_eigen, colonne, 1.0, A, colonne, Q, nb_eigen, 0.0, W, nb_eigen);
+
+	for(int j = 0; j < nb_eigen; j++)
+	{
+		for(int i = 0; i < ligne; i++)
+			med[i] = fabs(W[i * nb_eigen + j] / Q[i * nb_eigen + j]);
+		lambda[j] = mediane(ligne, med);
 	}
 
-	fprintf(stdout, "Iterations %d - Norme = %lf \n", k - 1, norme2(ligne, colonne, Q));
+	fprintf(stdout, "\nValeurs propres issues de la méthode\n");
+	affichage(nb_eigen, 1, lambda);
 
 #ifdef DEBUG
 	fprintf(stdout, "\nMatrice Q\n");
-	affichage(ligne, colonne, Q);
+	affichage(ligne, nb_eigen, Q);
 #endif
 
+	free(err);
+	free(lambda);
+	free(med);
 	free(W);
 	free(Q);
+	free(Q_old);
 }
 
 void matrice_test(int ligne, int colonne, double *A)
 {
-	for(int i = 0; i < ligne; i++)
+	for(int i = 1; i <= ligne; i++)
 	{
-		for(int j = 0; j < colonne; j++)
+		for(int j = 1; j <= colonne; j++)
 		{
-			if(j <= i)
-				A[i * colonne + j] = ligne + 1 - j;
+			if(j >= i)
+				A[(i-1) * colonne + (j-1)] = ligne + 1 - j;
 			else
-				A[i * colonne + j] = ligne + 1 - i;
+				A[(i-1) * colonne + (j-1)] = ligne + 1 - i;
 		}
 	}
 }
 
-void comparaison(int ligne)
+void comparaison(int ligne, int colonne, double *a)
 {
-	double *lambda = malloc(ligne * sizeof(double));
+	double *eigenvalues = malloc(ligne * sizeof(double));
+	double tmp;
 
-	for(int i = 0; i < ligne; i++)
-		lambda[i] = 1 / (2 - 2 * cos(((2 * i - 1) * M_PI) / (2 * ligne + 1)));
+	fprintf(stdout, "\nValeurs propres issues de LAPACk\n");
+	LAPACKE_dsyev(LAPACK_ROW_MAJOR, 'V', 'L', ligne, a, ligne, eigenvalues);
 
-	fprintf(stdout, "\nComparaison\n");
-	affichage(ligne, 1, lambda);
-	free(lambda);
+	for(int i = 0; i < ligne / 2; i++)
+	{
+		tmp = eigenvalues[i];
+		eigenvalues[i] = eigenvalues[ligne - i - 1];
+		eigenvalues[ligne - i - 1] = tmp;
+	}
+
+	affichage(ligne, 1, eigenvalues);
+	free(eigenvalues);
+}
+
+void mat_AMn(int ligne, int colonne, double *M)
+{
+	M[0] =  1.0;
+	M[1] = -0.1;
+	
+	for(int i = 1; i < colonne - 1; i++)
+	{
+		M[i * colonne + i-1] =  0.1;
+		M[i * colonne + i  ] =  1.0 + i;
+		M[i * colonne + i+1] = -0.1;
+	}
+
+	M[colonne * colonne - 2] = 0.1;
+	M[colonne * colonne - 1] = colonne;
 }

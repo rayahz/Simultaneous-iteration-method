@@ -1,34 +1,45 @@
 #include "fonctions.h"
 
+#ifdef __i386
+extern __inline__ uint64_t rdtsc(void)
+{
+	uint64_t x;
+	__asm__ volatile ("rdtsc" : "=A" (x));
+	return x;
+}
+#elif defined __amd64
+extern __inline__ uint64_t rdtsc(void)
+{
+	uint64_t a, d;
+	__asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
+	return (d<<32) | a;
+}
+#endif
+
 int main(int argc, char **argv)
 {
-	int ligne = 100, colonne = ligne;
-	double *matrice = malloc(ligne * colonne * sizeof(double));
+	/* *** DECLARATION DES VARIABLES *** */
+	int ligne = 11, colonne = ligne, nb_eigen = 10;
+	double *matrice = calloc(ligne * colonne, sizeof(double));
+	uint64_t timer_start, timer_end;
 
-	double m_a = 1.0, m_b = 2.0;
-	for(int i = 0; i < ligne; i++) 
-	{
-		for(int j = 0; j < colonne; j++)
-		{
-			if(i == j)
-				matrice[i * ligne + j] = m_a;
-			else if (i == j + 1 || i == j - 1)
-				matrice[i * ligne + j] = m_b;
-			else
-				matrice[i * ligne + j] = 0.0;
-		}
-	}
-
-/*	matrice_test(ligne, colonne, matrice);*/
-/*	comparaison(ligne);*/
+	/* *** INITIALISATION DES VARIABLES *** */
+	matrice_test(ligne, colonne, matrice);
 
 #ifdef DEBUG
 	fprintf(stdout, "Matrice de base\n");
 	affichage(ligne, colonne, matrice);
 #endif
 
-	simultaneous_iteration(ligne, colonne, matrice);
+	/* *** CORPS DU PROGRAMME PRINCIPAL *** */
+	timer_start = rdtsc();
+	simultaneous_iteration(ligne, colonne, nb_eigen, matrice);
+	timer_end = rdtsc();
 
+	comparaison(ligne, colonne, matrice);
+	fprintf(stdout, "Temps de l'execution : %e s\n", (timer_end - timer_start) / 2.9E9);
+
+	/* *** LIBERATION DES RESSOURCES *** */
 	free(matrice);
 
 	return 0;
