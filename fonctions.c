@@ -25,11 +25,6 @@ double norme_Frobeinius(int ligne, int colonne, double *Q_old, double *Q)
 	return sqrt(resultat);
 }
 
-void matMat(int m, int n, int k, double *A, double *B, double *C)
-{
-	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, 1.0, A, k, B, n, 0.0, C, n);
-}
-
 double mediane(int n, double *T)
 {
 	int j;
@@ -92,7 +87,7 @@ void simultaneous_iteration(int ligne, int colonne, int nb_eigen, double *A)
 		k++;
 	} while(norme_Frobeinius(ligne, nb_eigen, Q_old, Q) > 1E-6);
 
-	fprintf(stdout, "Iterations %d - Norme = %lf \n", k - 1, norme_Frobeinius(ligne, nb_eigen, Q_old, Q));
+	fprintf(stdout, "\nIterations %d - Norme = %lf \n", k - 1, norme_Frobeinius(ligne, nb_eigen, Q_old, Q));
 
 	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, ligne, nb_eigen, colonne, 1.0, A, colonne, Q, nb_eigen, 0.0, W, nb_eigen);
 
@@ -166,4 +161,58 @@ void mat_AMn(int ligne, int colonne, double *M)
 
 	M[colonne * colonne - 2] = 0.1;
 	M[colonne * colonne - 1] = colonne;
+}
+
+void saisie_matrice(int ligne, int colonne, double *a)
+{
+	fprintf(stdout, "\nSaisie de la matrice %d, %d\n", ligne, colonne);
+
+	for(int i = 0; i < ligne; i++)
+	{
+		for(int j = 0; j < colonne; j++)
+		{
+			fprintf(stdout, "(%d, %d) ?\t", i, j);
+			double valeur;
+			int erreur = scanf("%lf", &valeur);
+
+			if(erreur == 0)
+				a[i * colonne + j] = 0.;
+			else 
+				a[i * colonne + j] = valeur;
+		}
+	}
+
+	fprintf(stdout, "\nVoici la matrice que vous avez saisie\n");
+	affichage(ligne, colonne, a);
+}
+
+void saisie_proprietes(int *ligne, int *colonne, int *nb_eigen)
+{
+	fprintf(stdout, "Nombre de ligne ?\t");
+	if(scanf("%d", ligne) == 0)
+		fprintf(stderr, "Veuillez entrer au moins un nombre\n");
+
+	fprintf(stdout, "Nombre de colonne ?\t");
+	if(scanf("%d", colonne) == 0)
+		fprintf(stderr, "Veuillez entrer au moins un nombre\n");
+
+	if(*ligne != *colonne)
+	{
+		fprintf(stderr, "La matrice doit être carrée\n");
+		abort();
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(stdout, "Nombre de valeurs propres ?\t");
+	if(scanf("%d", nb_eigen) == 0)
+		fprintf(stderr, "Veuillez entrer au moins un nombre\n");
+
+	// nombre de valeurs propres <= nombres de colonnes
+	if(*nb_eigen - *colonne > 0)
+	{
+		fprintf(stderr, "Il ne peut pas y avoir plus de valeurs propres que de colonnes\n");
+		abort();
+		exit(EXIT_FAILURE);
+	}
+	
 }
