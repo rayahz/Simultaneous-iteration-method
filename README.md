@@ -1,3 +1,4 @@
+## Simultaneous iteration method (sequential)
 
 ### AUTHORS 
 

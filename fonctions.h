@@ -8,7 +8,6 @@
 #include <math.h>
 #include <string.h>
 #include <stdint.h>
-//#include <assert.h>
 
 #define M_PI 3.14159265358979323846
 #define DBL_EPSILON 0.00001
