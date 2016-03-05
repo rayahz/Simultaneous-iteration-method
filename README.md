@@ -1,8 +1,8 @@
-*****************************
-********** AUTHORS **********
-*****************************
-Yohan CHATELAIN    yohan.chatelain@gmail.com \newline
-Rayhana ZIARA      rayhana.ziara@gmail.com \newline
+
+# AUTHORS 
+
+Yohan CHATELAIN    yohan.chatelain@gmail.com
+Rayhana ZIARA      rayhana.ziara@gmail.com 
 M2 IHPS Students @ Université de Versailles St Quentin en Yvelines
 
 
