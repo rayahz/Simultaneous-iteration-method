@@ -1,6 +1,6 @@
 ## Simultaneous iteration method (OMP)
 
-### AUTHORS 
+### AUTHOR
 
 Rayhana ZIARA       <br/>
 M2 IHPS Student @ Université de Versailles St Quentin en Yvelines 
