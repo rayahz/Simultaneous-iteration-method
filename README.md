@@ -7,7 +7,7 @@ M2 IHPS Student @ Université de Versailles St Quentin en Yvelines
 
 ### LIST OF FILES
 
-- Makefile        Contains
+- Makefile        Contains the compilation rules
 - README          This file
 - fonctions.c     All the function regarding the simultaneous iteration method
 - fonctions.h     Header file containing the function declaration regarding the simultaneous iteration method
