@@ -241,7 +241,7 @@ void comparaison(int ligne, int colonne, double *a)
 */
 void saisie_matrice(int ligne, int colonne, double *a)
 {
-	fprintf(stdout, "\nSaisie de la matrice %d, %d\n", ligne, colonne);
+	fprintf(stdout, "\nSaisie de la matrice\n");
 
 	for(int i = 0; i < ligne; i++)
 	{
