@@ -1,3 +1,9 @@
+/* AUTHORS : Yohan CHATELAIN && Rayhana ZIARA
+*  Students in M2 IHPS 2015 / 2016
+*  Project regarding a Simultaneous Iteration Method
+*  LANGUAGE USED : C
+*/
+
 #include "fonctions.h"
 
 #ifdef __i386
@@ -27,6 +33,7 @@ int main(int argc, char **argv)
 	saisie_proprietes(&ligne, &colonne, &nb_eigen);
 	matrice = calloc(ligne * colonne, sizeof(double));
 	saisie_matrice(ligne, colonne, matrice);
+/*	matrice_test(ligne, colonne, matrice);*/
 
 #ifdef DEBUG
 	fprintf(stdout, "Matrice de base\n");
@@ -38,8 +45,7 @@ int main(int argc, char **argv)
 	simultaneous_iteration(ligne, colonne, nb_eigen, matrice);
 	timer_end = rdtsc();
 
-	comparaison(ligne, colonne, matrice);
-
+/*	comparaison(ligne, colonne, matrice);*/
 	fprintf(stdout, "\nTemps de l'execution : %e s\n", (timer_end - timer_start) / 2.9E9);
 
 	/* *** LIBERATION DES RESSOURCES *** */

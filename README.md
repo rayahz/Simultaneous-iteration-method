@@ -1,9 +1,9 @@
-## Simultaneous iteration method (sequential)
+## Simultaneous iteration method (OMP)
 
 ### AUTHORS 
 
-Yohan CHATELAIN    yohan.chatelain@gmail.com <br/>
-Rayhana ZIARA      rayhana.ziara@gmail.com <br/>
+Yohan CHATELAIN     <br/>
+Rayhana ZIARA       <br/>
 M2 IHPS Students @ Université de Versailles St Quentin en Yvelines 
 
 ### LIST OF FILES
@@ -19,6 +19,7 @@ M2 IHPS Students @ Université de Versailles St Quentin en Yvelines
 The Makefile contains differents options to execute the simulation.<br/>
 `make help`      : Summarize the options present in the Makefile<br/>
 `make`           : Compile the source files<br/>
+`make dgemm`     : Compile all the source files with dgemm function instead of our own matrix product<br/>
 `make debug`     : Compile the source files with a debug flag<br/>
 `make run`       : Execute the code<br/>
 `make clean`     : Delete the execution file<br/>

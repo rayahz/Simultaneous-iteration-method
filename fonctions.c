@@ -1,5 +1,18 @@
+/* AUTHORS : Yohan CHATELAIN && Rayhana ZIARA
+*  Students in M2 IHPS 2015 / 2016
+*  Project regarding a Simultaneous Iteration Method
+*  LANGUAGE USED : C
+*/
+
 #include "fonctions.h"
 
+/*
+*  NAME        : affichage
+*  DESCRIPTION : permet d'afficher une matrice ou vecteur
+*  IN          : nombre de ligne, nombre de colonne, matrice ou vecteur à afficher
+*  OUT         : /
+*  DEBUG       : /
+*/
 void affichage(int M, int N, double *A)
 {
 	for(int i = 0; i < M; i++)
@@ -10,11 +23,25 @@ void affichage(int M, int N, double *A)
 	}
 }
 
+/*
+*  NAME        : copy
+*  DESCRIPTION : permet de copier une matrice dans une autre matrice
+*  IN          : nombre de ligne, nombre de colonne, matrice destination, matrice source
+*  OUT         : /
+*  DEBUG       : /
+*/
 void copy(int ligne, int colonne, double *dest, double *src)
 {
 	memcpy(dest, src, ligne * colonne * sizeof(double));
 }
 
+/*
+*  NAME        : norme_Frobeinius
+*  DESCRIPTION : permet de calculer la norme de Frobeinus
+*  IN          : nombre de ligne, nombre de colonne, matrice à k-1, matrice k
+*  OUT         : norme
+*  DEBUG       : /
+*/
 double norme_Frobeinius(int ligne, int colonne, double *Q_old, double *Q)
 {
 	double resultat = 0.0;
@@ -25,6 +52,13 @@ double norme_Frobeinius(int ligne, int colonne, double *Q_old, double *Q)
 	return sqrt(resultat);
 }
 
+/*
+*  NAME        : mediane
+*  DESCRIPTION : permet de calculer la médiane d'un vecteur
+*  IN          : nombre de ligne, vecteur
+*  OUT         : mediane
+*  DEBUG       : /
+*/
 double mediane(int n, double *T)
 {
 	int j;
@@ -45,6 +79,13 @@ double mediane(int n, double *T)
 	return T[n / 2];
 }
 
+/*
+*  NAME        : simultaneous_iteration
+*  DESCRIPTION : permet d'effectuer la methode des iterations simultanees
+*  IN          : nombre de ligne, nombre de colonne, nombre de valeurs propres à calculer, matrice
+*  OUT         : /
+*  DEBUG       : affichage de la matrice Q à chaque itération
+*/
 void simultaneous_iteration(int ligne, int colonne, int nb_eigen, double *A)
 {
 	double *W = calloc(ligne * colonne, sizeof(double));
@@ -67,10 +108,11 @@ void simultaneous_iteration(int ligne, int colonne, int nb_eigen, double *A)
 	int k = 0;
 	do
 	{
-		memcpy(Q_old, Q, ligne * nb_eigen * sizeof(double));
+		// copie de Q dans Q_old
+		copy(ligne, nb_eigen, Q_old, Q);
 
 		// W = A * Q^k-1
-		cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, ligne, nb_eigen, colonne, 1.0, A, colonne, Q, nb_eigen, 0.0, W, nb_eigen);
+		matMat(ligne, nb_eigen, colonne, A, Q, W);
 
 		// Q * R = W
 		LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, ligne, nb_eigen, W, nb_eigen, tau);
@@ -83,14 +125,17 @@ void simultaneous_iteration(int ligne, int colonne, int nb_eigen, double *A)
 		affichage(ligne, nb_eigen, W);
 #endif
 
+		// copie de W dans Q
 		copy(ligne, nb_eigen, Q, W);
 		k++;
 	} while(norme_Frobeinius(ligne, nb_eigen, Q_old, Q) > 1E-6);
 
-	fprintf(stdout, "\nIterations %d - Norme = %lf \n", k - 1, norme_Frobeinius(ligne, nb_eigen, Q_old, Q));
+	fprintf(stdout, "\nIterations %d - Norme = %e \n", k - 1, norme_Frobeinius(ligne, nb_eigen, Q_old, Q));
 
-	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, ligne, nb_eigen, colonne, 1.0, A, colonne, Q, nb_eigen, 0.0, W, nb_eigen);
+	// W = AQ
+	matMat(ligne, nb_eigen, colonne, A, Q, W);
 
+	// calcul des valeurs propres
 	for(int j = 0; j < nb_eigen; j++)
 	{
 		for(int i = 0; i < ligne; i++)
@@ -114,6 +159,13 @@ void simultaneous_iteration(int ligne, int colonne, int nb_eigen, double *A)
 	free(Q_old);
 }
 
+/*
+*  NAME        : matrice_test
+*  DESCRIPTION : permet de creer une matrice test tridiagonale
+*  IN          : nombre de ligne, nombre de colonne, matrice
+*  OUT         : /
+*  DEBUG       : /
+*/
 void matrice_test(int ligne, int colonne, double *A)
 {
 	for(int i = 1; i <= ligne; i++)
@@ -121,13 +173,46 @@ void matrice_test(int ligne, int colonne, double *A)
 		for(int j = 1; j <= colonne; j++)
 		{
 			if(j >= i)
-				A[(i-1) * colonne + (j-1)] = ligne + 1 - j;
+				A[(i - 1) * colonne + (j - 1)] = ligne + 1 - j;
 			else
-				A[(i-1) * colonne + (j-1)] = ligne + 1 - i;
+				A[(i - 1) * colonne + (j - 1)] = ligne + 1 - i;
 		}
 	}
 }
 
+/*
+*  NAME        : matMat
+*  DESCRIPTION : permet d'effectuer le produit matriciel
+*  IN          : nombre de ligne de A, nombre de colonne de A, nombre de ligne de B, matrice A, matrice B et matrice resultat C
+*  OUT         : /
+*  DGEMM       : utilise blas au lieu de notre implementation
+*/
+void matMat(int m, int n, int l, double *A, double *B, double *C)
+{
+#ifdef DGEMM
+	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, l, 1.0, A, l, B, n, 0.0, C, n);
+#else
+	int i, j;
+	#pragma omp parallel for private(i,j)
+	for(int k = 0; k < n; k++)
+	{
+		for(i = 0; i < m; i++)
+		{
+			C[i * n + k] = 0.0;
+			for(j = 0; j < l; j++)
+				C[i * n + k] += A[i * l + j] * B[j * n + k];
+		}
+	}
+#endif
+}
+
+/*
+*  NAME        : comparaison
+*  DESCRIPTION : permet de verifier les valeurs propres obtenus avec notre implementation à ceux de lapacke
+*  IN          : nombre de ligne, nombre de colonne, matrice
+*  OUT         : /
+*  DEBUG       : /
+*/
 void comparaison(int ligne, int colonne, double *a)
 {
 	double *eigenvalues = malloc(ligne * sizeof(double));
@@ -147,22 +232,13 @@ void comparaison(int ligne, int colonne, double *a)
 	free(eigenvalues);
 }
 
-void mat_AMn(int ligne, int colonne, double *M)
-{
-	M[0] =  1.0;
-	M[1] = -0.1;
-	
-	for(int i = 1; i < colonne - 1; i++)
-	{
-		M[i * colonne + i-1] =  0.1;
-		M[i * colonne + i  ] =  1.0 + i;
-		M[i * colonne + i+1] = -0.1;
-	}
-
-	M[colonne * colonne - 2] = 0.1;
-	M[colonne * colonne - 1] = colonne;
-}
-
+/*
+*  NAME        : saisie_matrice
+*  DESCRIPTION : permet de saisir manuellement une matrice
+*  IN          : nombre de ligne, nombre de colonne, matrice
+*  OUT         : /
+*  DEBUG       : /
+*/
 void saisie_matrice(int ligne, int colonne, double *a)
 {
 	fprintf(stdout, "\nSaisie de la matrice %d, %d\n", ligne, colonne);
@@ -186,6 +262,13 @@ void saisie_matrice(int ligne, int colonne, double *a)
 	affichage(ligne, colonne, a);
 }
 
+/*
+*  NAME        : saisie_proprietes
+*  DESCRIPTION : permet de saisir le nombre de lignes, colonnes et valeurs propres à calculer
+*  IN          : nombre de ligne, nombre de colonne, nombres de valeurs propres
+*  OUT         : /
+*  DEBUG       : /
+*/
 void saisie_proprietes(int *ligne, int *colonne, int *nb_eigen)
 {
 	fprintf(stdout, "Nombre de ligne ?\t");
@@ -196,6 +279,7 @@ void saisie_proprietes(int *ligne, int *colonne, int *nb_eigen)
 	if(scanf("%d", colonne) == 0)
 		fprintf(stderr, "Veuillez entrer au moins un nombre\n");
 
+	// uniquement les matrices carrees
 	if(*ligne != *colonne)
 	{
 		fprintf(stderr, "La matrice doit être carrée\n");
